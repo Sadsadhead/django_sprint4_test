@@ -8,6 +8,7 @@ User = get_user_model()
 
 class PublicationModel(models.Model):
     """Абстрактная модель. Добвляет флаг is_published и поле created_at"""
+
     is_published = models.BooleanField(
         'Опубликовано',
         default=True,
