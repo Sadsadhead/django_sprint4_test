@@ -34,8 +34,8 @@ class PostDetailView(DetailView):
         post = super().get_object(queryset=queryset)
         if not post.is_published and (
             not self.request.user.is_authenticated or
-            (self.request.user != post.author and not
-             self.request.user.is_staff)
+            (not self.request.user.is_staff and
+             self.request.user != post.author)
         ):
             raise Http404('Такого поста не существует!')
         return post
