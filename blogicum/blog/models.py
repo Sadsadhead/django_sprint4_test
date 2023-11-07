@@ -28,7 +28,7 @@ class Location(PublicationModel):
         verbose_name_plural = 'Местоположения'
 
     def __str__(self):
-        return (self.name)[:settings.MAX_TITLE_LENGTH]
+        return self.name[:settings.MAX_TITLE_LENGTH]
 
 
 class Category(PublicationModel):
@@ -49,7 +49,7 @@ class Category(PublicationModel):
         verbose_name_plural = 'Категории'
 
     def __str__(self):
-        return (self.title)[:settings.MAX_TITLE_LENGTH]
+        return self.title[:settings.MAX_TITLE_LENGTH]
 
 
 class Post(PublicationModel):
@@ -86,10 +86,13 @@ class Post(PublicationModel):
         verbose_name = 'публикация'
         verbose_name_plural = 'Публикации'
         default_related_name = 'posts'
-        ordering = ['-pub_date']
+        ordering = ('-pub_date',)
 
     def __str__(self):
-        return (self.title)[:settings.MAX_TITLE_LENGTH]
+        return self.title[:settings.MAX_TITLE_LENGTH]
+
+    def get_absolute_url(self):
+        return reverse('blog:index')
 
 
 class Comment(models.Model):
@@ -98,9 +101,16 @@ class Comment(models.Model):
         on_delete=models.CASCADE,
         related_name='comments'
     )
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='commenter'
+    )
     text = models.TextField()
     created_date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Комментарий от {self.author} к посту '{self.post.title}'"
 
     def get_absolute_url(self):
         return reverse('blog:post_detail', args=[str(self.post.id)])

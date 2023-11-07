@@ -1,6 +1,7 @@
 from django.contrib import admin
+from django.utils.html import format_html
 
-from .models import Category, Location, Post
+from .models import Category, Comment, Location, Post
 
 
 @admin.register(Post)
@@ -11,7 +12,8 @@ class PostAdmin(admin.ModelAdmin):
         'author',
         'location',
         'pub_date',
-        'is_published'
+        'is_published',
+        'display_image'
     )
     list_editable = ('is_published',)
     search_fields = ('title',)
@@ -23,6 +25,34 @@ class PostAdmin(admin.ModelAdmin):
         'location',
     )
     list_display_links = ('title',)
+    fieldsets = (
+        ('Основная информация', {
+            'fields': (
+                'title',
+                'text',
+                'pub_date',
+                'author',
+                'location',
+                'category',
+                'image'
+            ),
+        }),
+        ('Публикация', {
+            'fields': (
+                'is_published',
+            ),
+        }),
+    )
+
+    def display_image(self, obj):
+        if obj.image:
+            return format_html(
+                '<img src="{}" width="50" height="50" />',
+                obj.image.url
+            )
+        return "Нет изображения!"
+
+    display_image.short_description = 'Изображение'
 
 
 @admin.register(Category)
@@ -38,3 +68,4 @@ class CategoryAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Location)
+admin.site.register(Comment)
