@@ -2,13 +2,18 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db.models import Count
 from django.http import Http404
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView
 from django.views.generic.edit import UpdateView
+from django.utils import timezone
 
 from blog.forms import CommentForm, EditProfileForm, PostForm
-from blog.mixins import CommentAuthorCheckMixin, CommonMixin
+from blog.mixins import (
+    CommentAuthorCheckMixin,
+    CommonMixin,
+    EditPostDispatchMixin
+)
 from blog.models import Category, Comment, Post
 
 User = get_user_model()
@@ -32,11 +37,14 @@ class PostDetailView(DetailView):
 
     def get_object(self, queryset=None):
         post = super().get_object(queryset=queryset)
-        if not post.is_published and (
-            not self.request.user.is_authenticated
-            or (
-                not self.request.user.is_staff
-                and self.request.user != post.author
+        now = timezone.now()
+        if not (
+            post.author == self.request.user
+            or post.author != self.request.user
+            and (
+                post.is_published
+                and post.pub_date <= now
+                and post.category.is_published
             )
         ):
             raise Http404('Такого поста не существует!')
@@ -122,28 +130,22 @@ class CreatePostView(LoginRequiredMixin, CreateView):
         )
 
 
-class EditPostView(UpdateView):
+class EditPostView(
+    LoginRequiredMixin,
+    EditPostDispatchMixin,
+    UpdateView
+):
     model = Post
     form_class = PostForm
     template_name = 'blog/create.html'
-
-    def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return redirect(reverse('login'))
-        post = self.get_object()
-        if not request.user == post.author:
-            return redirect(reverse(
-                'blog:post_detail', kwargs={'pk': post.pk}
-            ))
-        return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
         return reverse('blog:post_detail', kwargs={'pk': self.object.pk})
 
 
 class EditCommentView(
-    CommentAuthorCheckMixin,
     LoginRequiredMixin,
+    CommentAuthorCheckMixin,
     UserPassesTestMixin,
     UpdateView
 ):
@@ -152,7 +154,7 @@ class EditCommentView(
     template_name = 'blog/comment.html'
 
     def get_success_url(self):
-        return reverse_lazy(
+        return reverse(
             'blog:post_detail',
             kwargs={'pk': self.object.post.id}
         )
@@ -174,8 +176,8 @@ class EditProfileView(LoginRequiredMixin, UpdateView):
 
 
 class DeletePostView(
-    CommentAuthorCheckMixin,
     LoginRequiredMixin,
+    CommentAuthorCheckMixin,
     UserPassesTestMixin,
     DeleteView
 ):
@@ -190,8 +192,8 @@ class DeletePostView(
 
 
 class DeleteCommentView(
-    CommentAuthorCheckMixin,
     LoginRequiredMixin,
+    CommentAuthorCheckMixin,
     UserPassesTestMixin,
     DeleteView
 ):
@@ -199,7 +201,7 @@ class DeleteCommentView(
     template_name = 'blog/comment.html'
 
     def get_success_url(self):
-        return reverse_lazy(
+        return reverse(
             'blog:post_detail',
             kwargs={'pk': self.object.post.id}
         )

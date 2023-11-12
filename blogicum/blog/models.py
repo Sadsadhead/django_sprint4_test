@@ -92,7 +92,7 @@ class Post(PublicationModel):
         return self.title[:settings.MAX_TITLE_LENGTH]
 
     def get_absolute_url(self):
-        return reverse('blog:index')
+        return reverse('blog:post_detail', args=[str(self.pk)])
 
 
 class Comment(models.Model):
